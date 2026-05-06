@@ -413,26 +413,46 @@ const FeesView = ({ studentId }: { studentId: string }) => {
   const generateReceiptPDF = (receipt: any) => {
     const doc = new jsPDF();
     
-    // Header
-    doc.setFontSize(22);
-    doc.text("EduPortal Receipt", 105, 20, { align: 'center' });
+    // 1. Header
+    doc.setFontSize(18);
+    doc.text("OFFICIAL PAYMENT RECEIPT", 105, 20, { align: "center" });
     
+    // 2. Student Info
     doc.setFontSize(12);
-    doc.text(`Receipt ID: ${receipt.id}`, 20, 40);
+    doc.text(`Receipt Title: ${receipt.receipt_title}`, 20, 40);
     doc.text(`Date: ${new Date(receipt.created_at).toLocaleDateString()}`, 20, 50);
-    doc.text(`Title: ${receipt.receipt_title}`, 20, 60);
-    
-    doc.line(20, 70, 190, 70);
-    
-    // Body - Assuming items are stored or implied
-    doc.text("Transaction Details:", 20, 80);
-    doc.text("Amount Paid:", 20, 90);
-    doc.text(`NGN ${parseFloat(receipt.amount || 0).toLocaleString()}`, 190, 90, { align: 'right' });
-    
-    doc.line(20, 100, 190, 100);
-    doc.text("Thank you for your payment.", 105, 115, { align: 'center' });
-    
-    doc.save(`Receipt_${receipt.id.slice(0, 8)}.pdf`);
+
+    // 3. Item Details
+    let yPos = 70;
+    doc.text("Description", 20, 65);
+    doc.text("Amount (N)", 150, 65);
+    doc.line(20, 67, 190, 67);
+
+    // Parse items if they are stored as a string
+    const itemsList = typeof receipt.items === 'string' ? JSON.parse(receipt.items) : (receipt.items || []);
+
+    itemsList.forEach((item: any) => {
+      doc.text(item.detail || "Detail", 20, yPos);
+      doc.text(parseFloat(item.amount || 0).toLocaleString(), 150, yPos);
+      yPos += 10;
+    });
+
+    // 4. Total Calculation
+    const total = itemsList.reduce((sum: number, i: any) => sum + parseFloat(i.amount || 0), 0);
+    doc.setFont("helvetica", "bold");
+    doc.text(`TOTAL PAID: N${total.toLocaleString()}`, 150, yPos + 10);
+
+    // 5. Signature
+    if (receipt.signature_data) {
+      try {
+        doc.addImage(receipt.signature_data, 'PNG', 20, yPos + 20, 50, 20);
+        doc.text("Authorized Signature", 20, yPos + 45);
+      } catch (e) {
+        console.error("Signature image error:", e);
+      }
+    }
+
+    doc.save(`${receipt.receipt_title || 'Receipt'}.pdf`);
   };
 
   const totalBalance = fees.reduce((acc, fee) => {
