@@ -12,7 +12,7 @@ export default defineConfig(({mode}) => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+        includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'icon.svg'],
         manifest: {
           name: 'EduPortal Student app',
           short_name: 'EduPortal',
@@ -20,14 +20,14 @@ export default defineConfig(({mode}) => {
           theme_color: '#4f46e5',
           icons: [
             {
-              src: 'favicon.ico',
+              src: 'icon.svg',
               sizes: '192x192',
-              type: 'image/png',
+              type: 'image/svg+xml',
             },
             {
-              src: 'favicon.ico',
+              src: 'icon.svg',
               sizes: '512x512',
-              type: 'image/png',
+              type: 'image/svg+xml',
             },
           ],
         },
