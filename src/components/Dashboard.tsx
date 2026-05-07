@@ -410,49 +410,84 @@ const FeesView = ({ studentId }: { studentId: string }) => {
     setLoading(false);
   };
 
-  const generateReceiptPDF = (receipt: any) => {
+  const generateReceiptPDF = (receipt: any, schoolName: string = "EduPortal") => {
     const doc = new jsPDF();
+    let yPos = 20;
+
+    // 1. Institution Name (Large Header)
+    doc.setFontSize(22);
+    doc.setFont("helvetica", "bold");
+    doc.text(schoolName.toUpperCase(), 105, yPos, { align: "center" });
     
-    // 1. Header
-    doc.setFontSize(18);
-    doc.text("OFFICIAL PAYMENT RECEIPT", 105, 20, { align: "center" });
-    
-    // 2. Student Info
+    yPos += 15;
+
+    // 2. Receipt Title
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "normal");
+    doc.text(receipt.receipt_title || "Official Receipt", 105, yPos, { align: "center" });
+
+    yPos += 10;
+    doc.setLineWidth(0.5);
+    doc.line(20, yPos, 190, yPos); // Horizontal line
+
+    yPos += 15;
+
+    // 3. Table Headers
+    doc.setFont("helvetica", "bold");
     doc.setFontSize(12);
-    doc.text(`Receipt Title: ${receipt.receipt_title}`, 20, 40);
-    doc.text(`Date: ${new Date(receipt.created_at).toLocaleDateString()}`, 20, 50);
+    doc.text("DESCRIPTION", 25, yPos);
+    doc.text("AMOUNT (N)", 150, yPos);
+    
+    yPos += 5;
+    doc.line(20, yPos, 190, yPos); // Divider line
+    yPos += 10;
 
-    // 3. Item Details
-    let yPos = 70;
-    doc.text("Description", 20, 65);
-    doc.text("Amount (N)", 150, 65);
-    doc.line(20, 67, 190, 67);
-
-    // Parse items if they are stored as a string
+    // 4. Details (Items and Amount)
+    doc.setFont("helvetica", "normal");
     const itemsList = typeof receipt.items === 'string' ? JSON.parse(receipt.items) : (receipt.items || []);
+    let total = 0;
 
     itemsList.forEach((item: any) => {
-      doc.text(item.detail || "Detail", 20, yPos);
-      doc.text(parseFloat(item.amount || 0).toLocaleString(), 150, yPos);
+      doc.text(item.detail || "Detail", 25, yPos);
+      const amt = parseFloat(item.amount || 0);
+      doc.text(amt.toLocaleString(), 150, yPos);
+      total += amt;
       yPos += 10;
+
+      // Page overflow check
+      if (yPos > 270) {
+        doc.addPage();
+        yPos = 20;
+      }
     });
 
-    // 4. Total Calculation
-    const total = itemsList.reduce((sum: number, i: any) => sum + parseFloat(i.amount || 0), 0);
+    // 5. Total Section
+    yPos += 5;
+    doc.line(20, yPos, 190, yPos);
+    yPos += 10;
+    doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
-    doc.text(`TOTAL PAID: N${total.toLocaleString()}`, 150, yPos + 10);
+    doc.text("TOTAL PAID:", 25, yPos);
+    doc.text(`N${total.toLocaleString()}`, 150, yPos);
 
-    // 5. Signature
+    // 6. Footer (Date and Signature)
+    yPos += 30;
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "italic");
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 20, yPos);
+
     if (receipt.signature_data) {
       try {
-        doc.addImage(receipt.signature_data, 'PNG', 20, yPos + 20, 50, 20);
-        doc.text("Authorized Signature", 20, yPos + 45);
+        doc.addImage(receipt.signature_data, 'PNG', 140, yPos - 15, 40, 15);
+        doc.text("___________________", 140, yPos);
+        doc.text("Authorized Signature", 140, yPos + 5);
       } catch (e) {
         console.error("Signature image error:", e);
       }
     }
 
-    doc.save(`${receipt.receipt_title || 'Receipt'}.pdf`);
+    // 7. Save the File
+    doc.save(`${schoolName}_Receipt_${receipt.id.substring(0, 5)}.pdf`);
   };
 
   const totalBalance = fees.reduce((acc, fee) => {
